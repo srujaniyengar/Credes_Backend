@@ -17,4 +17,3 @@ gunicorn
 python-dotenv
 dotenv
 djangorestframework
-rest_framework
