@@ -1,25 +1,14 @@
-<p align="center">
-  <img src="https://img.shields.io/badge/Version-v1.0-blue?style=for-the-badge" alt="Version">
-  <img src="https://img.shields.io/badge/License-GPL%203.0-black?style=for-the-badge" alt="License">
-  <img src="https://img.shields.io/badge/DB-PostgreSQL%20%7C%20SQLite-blue?style=for-the-badge" alt="Database">
-  <img src="https://img.shields.io/badge/Tests-Passing-brightgreen?style=for-the-badge" alt="Tests">
-</p>
-
-# Task Management API – Detailed Documentation (v1)
+# Task Management API – Detailed Documentation (v1.1)
 
 ---
 
 ## 1. Custom User Model
 
-**Approach**
 - Subclassed `AbstractBaseUser` and `PermissionsMixin`.
 - Email is the unique `USERNAME_FIELD`; no username.
-- Fields: `email`, `full_name`, `role` (Admin/User), `date_joined`, `is_active`.
+- Fields: `email`, `full_name`, `role` (`Admin`/`User`), `date_joined`, `is_active`.
 - Custom `UserManager` for user and superuser creation.
-
-**Reasoning:**
-- Email login is modern and required by the brief.
-- `is_active` enables soft deletes and easy permission checks.
+- **Soft delete** is implemented by setting `is_active=False`.
 
 ---
 
@@ -28,10 +17,6 @@
 - JWT (using `djangorestframework-simplejwt`) for stateless secure authentication.
 - Custom JWT serializer denies login for inactive users.
 - All protected endpoints require `Authorization: Bearer <access_token>`.
-
-**Reasoning:**
-- JWT is robust, stateless, and well supported in DRF.
-- Secure: soft-deleted users can't auth or access any resources.
 
 ---
 
@@ -43,22 +28,14 @@
     - `IsAdminOrAssignedToForTask`: For task object-level access (admin or assigned user).
 - Querysets and object permissions restrict access to only allowed resources and actions.
 
-**Reasoning:**
-- DRF permissions are declarative, reusable, and clear.
-- All RBAC is enforced both at endpoint and object level for security.
-
 ---
 
 ## 4. Tasks & Comments
 
-- **Task model:** title, description, status (`To-Do | In-Progress | Done`), `assigned_to` (FK), `created_at`, `updated_at`.
-- **Comment model:** task (FK), author (FK), text, created_at.
+- **Task model:** `title`, `description`, `status` (`To-Do` | `In-Progress` | `Done`), `assigned_to` (FK), `created_at`, `updated_at`.
+- **Comment model:** `task` (FK), `author` (FK), `text`, `created_at`.
 - Admin can see all tasks and all comments.
 - Users only see their own assigned tasks and comments on those tasks.
-
-**Reasoning:**
-- Model structure matches the brief and enables all required behaviors.
-- Comments are always attached to a task and author.
 
 ---
 
@@ -66,18 +43,26 @@
 
 - **Endpoint:** `PATCH /users/<id>/soft-delete/` (admin only)
 - Sets `is_active=False` on the user.
-- User row is NOT deleted; all tasks and comments remain in the DB.
+- User row is NOT deleted; all tasks and comments remain.
 - Soft-deleted user cannot log in or access any endpoint (enforced via permissions and JWT).
-- The `/users/` endpoint shows the user with `is_active: false`.
-- The task serializer exposes `assigned_to_inactive: true` for tasks assigned to inactive users.
-
-**Reasoning:**
-- Preserves audit trail and business context.
-- Cleanly disables a user and revokes all access with zero data loss.
+- `/users/` endpoint shows the user with `is_active: false`.
+- Task serializer exposes `assigned_to_inactive: true` for tasks assigned to inactive users.
 
 ---
 
-## 6. API Endpoints – Details
+## 6. Caching, Filtering & Pagination
+
+- **Caching:** List endpoints (`/tasks/`, `/users/`, `/tasks/<id>/comments/`) are cached (5 minutes).
+- **Filtering:** All list endpoints support query param filters, e.g.:
+    - `/tasks/?status=Done`
+    - `/users/?role=User&is_active=true`
+    - `/tasks/<id>/comments/?author=<user_id>`
+- **Pagination:** All list endpoints use DRF's pagination:
+    - Response includes `count`, `next`, `previous`, `results`.
+
+---
+
+## 7. API Endpoints – Details
 
 ### Auth
 
@@ -91,7 +76,7 @@
 ### Users (Admin only)
 
 - **GET /users/**  
-  Admins list all users (shows all fields except password).
+  Admins list all users (supports filters/pagination).
 - **PATCH /users/<id>/soft-delete/**  
   Admin soft-deletes any user (not self).
 
@@ -100,6 +85,7 @@
 - **GET /tasks/**
     - Admin: all tasks.
     - User: only own assigned tasks.
+    - Supports filters/pagination.
 - **POST /tasks/**
     - Admin only: create a task and assign a user.
 - **GET /tasks/<id>/**
@@ -116,12 +102,13 @@
 - **GET /tasks/<id>/comments/**
     - Admin: all comments on any task.
     - User: comments only on their assigned tasks.
+    - Supports filters/pagination.
 - **POST /tasks/<id>/comments/**
     - User: add comment only to own assigned tasks.
 
 ---
 
-## 7. Example Flows
+## 8. Example Flows
 
 ### Register
 ```http
@@ -146,6 +133,32 @@ Response:
 {
   "refresh": "jwt-refresh-token...",
   "access": "jwt-access-token..."
+}
+```
+
+### List Tasks (with Filtering & Pagination)
+```http
+GET /tasks/?status=To-Do&page=1&page_size=5
+Authorization: Bearer <TOKEN>
+```
+Response:
+```json
+{
+  "count": 11,
+  "next": "http://localhost:8000/tasks/?status=To-Do&page=2&page_size=5",
+  "previous": null,
+  "results": [
+    {
+      "id": 3,
+      "title": "Some Task",
+      "description": "...",
+      "status": "To-Do",
+      "assigned_to": 4,
+      "assigned_to_inactive": false,
+      ...
+    },
+    ...
+  ]
 }
 ```
 
@@ -181,32 +194,33 @@ Response:
 
 ---
 
-## 8. Testing
+## 9. Testing
 
 - The `test.py` script automates testing for:
     - Registration, login, RBAC enforcement
     - Admin/user flows for tasks and comments
     - Soft delete and inactive user access denial
-    - Data integrity
+    - Filtering, pagination, and data integrity
 
 ---
 
-## 9. Design Decisions
+## 10. Design Decisions
 
 - **Soft delete** is enforced everywhere via `is_active` and DRF permissions.
 - **RBAC** is separated into permission classes for clarity and reuse.
 - **Data is never hard deleted** for audit, traceability, and integrity.
 - **JWT** is used for stateless, scalable authentication.
+- **Filtering, pagination, and caching** are implemented for practical, real-world usability.
 
 ---
 
-## 10. FAQ
+## 11. FAQ
 
 - **How do I enable optional features (filtering, pagination, docs)?**  
-  These are reserved for v2 and will be described in a follow-up release.
+  These are now enabled in v1.1. See examples above.
 
 ---
 
-## 11. Contact
+## 12. Contact
 
 Questions? [srujanparthasarathyiyengar@gmail.com](mailto:srujanparthasarathyiyengar@gmail.com)

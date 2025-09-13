@@ -1,18 +1,19 @@
-# Minimal Task Management System – Django REST Backend (v1)
+# Minimal Task Management System – Django REST Backend
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Version-v1.0-blue?style=for-the-badge" alt="Version">
+  <img src="https://img.shields.io/badge/Version-v1.1-blue?style=for-the-badge" alt="Version">
   <img src="https://img.shields.io/badge/License-GPL%203.0-black?style=for-the-badge" alt="License">
   <img src="https://img.shields.io/badge/DB-PostgreSQL%20%7C%20SQLite-blue?style=for-the-badge" alt="Database">
   <img src="https://img.shields.io/badge/Tests-Passing-brightgreen?style=for-the-badge" alt="Tests">
+  <img src="https://img.shields.io/badge/Features-Caching%2C%20Filtering%2C%20Pagination-brightgreen?style=for-the-badge" alt="Features">
 </p>
 
+---
+
+A minimal Task Management API built with Django, Django REST Framework (DRF), and JWT authentication. Implements robust RBAC, custom User model, soft delete, filtering, pagination, caching, and core features as per assignment and beyond.
 
 ---
 
-A minimal Task Management API built using Django, Django REST Framework (DRF), and JWT authentication. Implements robust RBAC, custom User model, soft delete, and all core features as per the assignment brief.
-
----
 ## Quickstart
 
 ### 1. Clone & Install
@@ -91,14 +92,14 @@ python manage.py runserver
 
 | Endpoint                    | Method | Description           |
 |-----------------------------|--------|----------------------|
-| /users/                     | GET    | List all users       |
+| /users/                     | GET    | List all users (filter & paginate) |
 | /users/<id>/soft-delete/    | PATCH  | Soft-delete a user   |
 
 ### Tasks
 
 | Endpoint           | Method   | Access   | Description                 |
 |--------------------|----------|----------|-----------------------------|
-| /tasks/            | GET      | Admin/User | List tasks (see only own as user) |
+| /tasks/            | GET      | Admin/User | List tasks (see only own as user; filter & paginate) |
 | /tasks/            | POST     | Admin    | Create task                 |
 | /tasks/<id>/       | GET      | Admin/User | Retrieve task (only assigned as user) |
 | /tasks/<id>/       | PATCH    | Admin/User | Update task/Status (only own status as user) |
@@ -108,7 +109,7 @@ python manage.py runserver
 
 | Endpoint                       | Method | Access     | Description                         |
 |---------------------------------|--------|------------|-------------------------------------|
-| /tasks/<id>/comments/           | GET    | Admin/User | List comments (only own as user)    |
+| /tasks/<id>/comments/           | GET    | Admin/User | List comments (only own as user; filter & paginate) |
 | /tasks/<id>/comments/           | POST   | User       | Add comment (only own tasks)        |
 
 ---
@@ -138,6 +139,18 @@ python manage.py runserver
 
 ---
 
+## Features
+
+- **Robust RBAC** with custom DRF permissions.
+- **Soft delete:** Data preserved, users deactivated.
+- **JWT authentication** (`djangorestframework-simplejwt`).
+- **Filtering** on tasks, users, comments (e.g. `/tasks/?status=Done`).
+- **Pagination** on all list endpoints (see `results`, `count`, `next`, `previous` in response).
+- **Caching** for main list endpoints (for efficiency).
+- **Comprehensive tests:** See `test.py`.
+
+---
+
 ## Running Tests
 
 ```bash
@@ -149,19 +162,18 @@ python test.py
 
 ## API Docs
 
-- See [docs.md](docs.md) for detailed API documentation and design explanations.
-
----
-
-## Soft Delete Approach
-
-- Soft delete is implemented by setting `is_active=False` on User.
-- DRF permission classes and custom JWT serializer enforce that inactive users are denied all access.
-- No hard deletes; all data is preserved for audit/integrity.
-- See [docs.md](docs.md) for further details.
+- See [`docs.md`](docs.md) for detailed API documentation, model structure, permissions, and design explanations.
 
 ---
 
 ## Contact
 
-Reach out: [srujanparthasarathyiyengar@gmail.com](mailto:contact@credes.in)
+Reach out: [srujanparthasarathyiyengar@gmail.com](mailto:srujanparthasarathyiyengar@gmail.com)
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Version-v1.1-blue?style=for-the-badge" alt="Version">
+  <img src="https://img.shields.io/badge/License-GPL%203.0-black?style=for-the-badge" alt="License">
+  <img src="https://img.shields.io/badge/DB-PostgreSQL%20%7C%20SQLite-blue?style=for-the-badge" alt="Database">
+  <img src="https://img.shields.io/badge/Tests-Passing-brightgreen?style=for-the-badge" alt="Tests">
+  <img src="https://img.shields.io/badge/Features-Caching%2C%20Filtering%2C%20Pagination-brightgreen?style=for-the-badge" alt="Features">
+</p>
