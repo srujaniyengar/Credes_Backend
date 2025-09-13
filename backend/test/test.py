@@ -29,7 +29,6 @@ def check(resp, expect=None):
     return passed, data
 
 def test_admin_user_list():
-    """Test admin-only user listing endpoint"""
     admin_email = os.environ.get("ADMIN_EMAIL", "admin1@admin.com")
     admin_password = os.environ.get("ADMIN_PASSWORD", "passwordis12345")
     step("Admin login (for user listing)")
@@ -52,7 +51,6 @@ def test_admin_user_list():
     return passed
 
 def test_admin_view_all_comments(task_id):
-    """Test admin can view all comments on any task"""
     admin_email = os.environ.get("ADMIN_EMAIL", "admin1@admin.com")
     admin_password = os.environ.get("ADMIN_PASSWORD", "passwordis12345")
     step("Admin login (for comment viewing)")
@@ -75,7 +73,6 @@ def test_admin_view_all_comments(task_id):
     return passed
 
 def test_user_cannot_create_task(headers, user_id):
-    """Test non-admin user cannot create a task (expect 403)"""
     step("User tries to create a task (should be forbidden)")
     r = requests.post(f"{API}/tasks/", json={
         "title": "User Should Not Create",
@@ -93,7 +90,6 @@ def test_user_cannot_create_task(headers, user_id):
     return passed
 
 def test_user_cannot_delete_task(user_headers, task_id):
-    """Test non-admin user cannot delete a task (expect 403)"""
     step("User tries to delete a task (should be forbidden)")
     r = requests.delete(f"{API}/tasks/{task_id}/", headers=user_headers)
     passed = r.status_code == 403
@@ -102,7 +98,6 @@ def test_user_cannot_delete_task(user_headers, task_id):
     return passed
 
 def create_task_as_admin(assigned_to):
-    """Helper: Create a task as admin and return task_id"""
     admin_email = os.environ.get("ADMIN_EMAIL", "admin1@admin.com")
     admin_password = os.environ.get("ADMIN_PASSWORD", "passwordis12345")
     step("Admin login (for task creation)")
@@ -127,6 +122,76 @@ def create_task_as_admin(assigned_to):
     else:
         print("Admin failed to create task:", r.status_code, r.text)
         return None
+
+def test_soft_delete_user_flow():
+    results = []
+    # 1. Register and login as a new user
+    step("Register user for soft delete test")
+    user_email = unique_email()
+    pwd = "TestPass123!"
+    r = requests.post(f"{API}/auth/register/", json={
+        "email": user_email, "password": pwd, "full_name": "SoftDelete User"
+    })
+    passed, _ = check(r, expect=[200, 201])
+    results.append(("Register user for soft delete", passed))
+
+    # 2. Login as user to get their ID and JWT
+    step("Login as user for soft delete test")
+    r = requests.post(f"{API}/auth/login/", json={"email": user_email, "password": pwd})
+    passed, tokens = check(r, expect=[200])
+    results.append(("Login as user for soft delete", passed))
+    user_id = extract_user_id_from_jwt(tokens["access"])
+    user_jwt = tokens["access"]
+    user_headers = {"Authorization": f"Bearer {user_jwt}"}
+
+    # 3. Login as admin
+    admin_email = os.environ.get("ADMIN_EMAIL", "admin1@admin.com")
+    admin_pwd = os.environ.get("ADMIN_PASSWORD", "passwordis12345")
+    step("Admin login for soft delete test")
+    r = requests.post(f"{API}/auth/login/", json={"email": admin_email, "password": admin_pwd})
+    passed, admin_tokens = check(r, expect=[200])
+    results.append(("Admin login for soft delete", passed))
+    admin_jwt = admin_tokens["access"]
+    admin_headers = {"Authorization": f"Bearer {admin_jwt}"}
+
+    # 4. Admin soft deletes the user
+    step("Admin soft-deletes user")
+    r = requests.patch(f"{API}/users/{user_id}/soft-delete/", headers=admin_headers)
+    passed = r.status_code == 200 and r.json().get("is_active") is False
+    print(f"Soft delete status: {r.status_code}, response: {r.json()}")
+    results.append(("Admin soft delete user", passed))
+
+    # 5. User tries to log in (should fail)
+    step("Soft deleted user tries to login")
+    r = requests.post(f"{API}/auth/login/", json={"email": user_email, "password": pwd})
+    failed_login = (r.status_code == 401)
+    print(f"Login-after-delete status: {r.status_code}, response: {r.json()}")
+    results.append(("Soft deleted user cannot login", failed_login))
+
+    # 6. User tries to access API with old JWT (should fail)
+    step("Soft deleted user tries to use old JWT")
+    r = requests.get(f"{API}/tasks/", headers=user_headers)
+    failed_api = r.status_code in (401, 403)
+    print(f"API-after-delete status: {r.status_code}, response: {r.text}")
+    results.append(("Soft deleted user cannot use API", failed_api))
+
+    # 7. User data is preserved and is_active is false
+    step("Admin checks user list for soft deleted user")
+    r = requests.get(f"{API}/users/", headers=admin_headers)
+    userlist = r.json()
+    found = any(u["email"] == user_email and u["is_active"] is False for u in userlist)
+    print("Soft deleted user in list and inactive:", found)
+    results.append(("Soft deleted user appears in list as inactive", found))
+
+    # Print summary for this flow
+    print("\n--- Soft Delete User Flow Results ---")
+    all_passed = True
+    for name, passed in results:
+        print(f"{name}: {'PASSED' if passed else 'FAILED'}")
+        if not passed:
+            all_passed = False
+    print("Soft Delete User Flow:", "PASSED" if all_passed else "FAILED")
+    return all_passed
 
 def main():
     results = []
@@ -238,6 +303,10 @@ def main():
             results.append(("Admin view all comments on a task", admin_view_comments_passed))
         else:
             results.append(("Admin view all comments on a task", None))
+
+        # Soft delete user flow
+        soft_delete_passed = test_soft_delete_user_flow()
+        results.append(("Soft delete user flow", soft_delete_passed))
 
     except Exception as e:
         print("FAILED")
