@@ -3,7 +3,8 @@ from .views import (
     RegisterView, TaskListCreateView, TaskRetrieveUpdateDestroyView,
     CommentListCreateView, UserListView, UserSoftDeleteView, MyTokenObtainPairView
 )
-
+def api_root(request):
+    return JsonResponse({"message": "Welcome to the Credes API!"})
 urlpatterns = [
     path('auth/register/', RegisterView.as_view(), name='register'),
     path('auth/login/', MyTokenObtainPairView.as_view(), name='token_obtain_pair'),
