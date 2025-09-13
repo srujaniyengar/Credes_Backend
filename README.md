@@ -12,6 +12,9 @@
 
 A minimal Task Management API built with Django, Django REST Framework (DRF), and JWT authentication. Implements robust RBAC, custom User model, soft delete, filtering, pagination, caching, and core features as per assignment and beyond.
 
+**Live Backend URL:**  
+👉 [https://credes-backend.onrender.com/](https://credes-backend.onrender.com/)
+
 ---
 
 ## Quickstart
