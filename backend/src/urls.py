@@ -1,11 +1,15 @@
 from django.urls import path
 from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 from .views import (
     RegisterView, TaskListCreateView, TaskRetrieveUpdateDestroyView,
     CommentListCreateView, UserListView, UserSoftDeleteView, MyTokenObtainPairView
 )
 
+@csrf_exempt
 def api_root(request):
+    if request.method not in ('GET', 'HEAD', 'OPTIONS'):
+        return JsonResponse({"detail": "Method not allowed."}, status=405)
     return JsonResponse({
         "message": "Welcome to the Credes API!",
         "endpoints": {
