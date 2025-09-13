@@ -55,7 +55,6 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def get_short_name(self):
         return self.full_name.split()[0] if self.full_name else ''
-#TODO:add task &cmt
 
 class Task(models.Model):
     class Status(models.TextChoices):

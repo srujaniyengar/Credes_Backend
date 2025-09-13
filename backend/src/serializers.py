@@ -1,5 +1,7 @@
 from rest_framework import serializers
 from .models import User, Task, Comment
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.exceptions import AuthenticationFailed
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
@@ -18,10 +20,15 @@ class RegisterSerializer(serializers.ModelSerializer):
         return user
 
 class TaskSerializer(serializers.ModelSerializer):
+    assigned_to_inactive = serializers.SerializerMethodField()
+
     class Meta:
         model = Task
         fields = '__all__'
         read_only_fields = ('created_at', 'updated_at')
+
+    def get_assigned_to_inactive(self, obj):
+        return not obj.assigned_to.is_active if obj.assigned_to else None
 
 class CommentSerializer(serializers.ModelSerializer):
     class Meta:
@@ -33,3 +40,11 @@ class UserListSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ('id', 'email', 'full_name', 'role', 'is_active', 'date_joined')
+
+# Custom JWT serializer to block inactive users
+class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
+    def validate(self, attrs):
+        data = super().validate(attrs)
+        if not self.user.is_active:
+            raise AuthenticationFailed('User account is inactive (soft deleted).')
+        return data

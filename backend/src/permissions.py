@@ -2,12 +2,16 @@ from rest_framework.permissions import BasePermission, SAFE_METHODS
 
 class IsAdmin(BasePermission):
     def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.role == 'Admin'
+        return request.user.is_authenticated and request.user.role == 'Admin' and request.user.is_active
+
+class IsActiveUser(BasePermission):
+    def has_permission(self, request, view):
+        return request.user and request.user.is_authenticated and request.user.is_active
 
 class IsAdminOrAssignedToForTask(BasePermission):
     def has_object_permission(self, request, view, obj):
         user = request.user
-        if not user.is_authenticated:
+        if not user.is_authenticated or not user.is_active:
             return False
         if user.role == 'Admin':
             return True
