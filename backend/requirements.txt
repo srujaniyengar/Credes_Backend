@@ -16,3 +16,4 @@ urllib3==2.5.0
 gunicorn
 python-dotenv
 dotenv
+djangorestframework
