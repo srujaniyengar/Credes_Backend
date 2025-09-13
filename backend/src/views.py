@@ -4,6 +4,9 @@ from rest_framework import status, generics, permissions
 from rest_framework.exceptions import PermissionDenied, NotFound
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.permissions import AllowAny
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
+from django_filters.rest_framework import DjangoFilterBackend
 #mymodules
 from .models import Task, Comment, User
 from .serializers import (
@@ -12,6 +15,7 @@ from .serializers import (
 from .permissions import IsAdmin, IsActiveUser, IsAdminOrAssignedToForTask
 
 
+@method_decorator(cache_page(60 * 5), name='dispatch')
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer
 
@@ -24,10 +28,13 @@ class RegisterView(APIView):
             return Response({'message': 'User registered successfully.'}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+@method_decorator(cache_page(60 * 5), name='dispatch')
 class TaskListCreateView(generics.ListCreateAPIView):
     queryset = Task.objects.all()
     serializer_class = TaskSerializer
     permission_classes = [IsActiveUser]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['status', 'assigned_to']
 
     def get_queryset(self):
         user = self.request.user
@@ -59,9 +66,12 @@ class TaskRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
             return super().update(request, *args, **kwargs)
         raise PermissionDenied("Only admin or assigned user (for status) can update task.")
 
+@method_decorator(cache_page(60 * 5), name='dispatch')
 class CommentListCreateView(generics.ListCreateAPIView):
     serializer_class = CommentSerializer
     permission_classes = [IsActiveUser]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['author']
 
     def get_queryset(self):
         task = Task.objects.get(pk=self.kwargs['task_id'])
@@ -83,6 +93,8 @@ class UserListView(generics.ListAPIView):
     queryset = User.objects.all()
     serializer_class = UserListSerializer
     permission_classes = [IsAdmin]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['is_active', 'role']
 
 class UserSoftDeleteView(APIView):
     permission_classes = [IsAdmin]

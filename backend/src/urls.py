@@ -1,5 +1,5 @@
 from django.urls import path
-from django.http import JsonResponse  # <-- Add this import
+from django.http import JsonResponse
 from .views import (
     RegisterView, TaskListCreateView, TaskRetrieveUpdateDestroyView,
     CommentListCreateView, UserListView, UserSoftDeleteView, MyTokenObtainPairView
@@ -11,16 +11,16 @@ def api_root(request):
         "endpoints": {
             "/auth/register/": "POST - Register a new user",
             "/auth/login/": "POST - Obtain JWT token (login)",
-            "/tasks/": "GET, POST - List all tasks or create a new task",
+            "/tasks/": "GET, POST - List all tasks or create a new task (with filters and pagination)",
             "/tasks/<pk>/": "GET, PUT, PATCH, DELETE - Retrieve, update, or delete a specific task",
-            "/tasks/<task_id>/comments/": "GET, POST - List or add comments for a task",
-            "/users/": "GET - List all users",
-            "/users/<pk>/soft-delete/": "POST - Soft delete a user"
+            "/tasks/<task_id>/comments/": "GET, POST - List or add comments for a task (with filters and pagination)",
+            "/users/": "GET - List all users (with filters and pagination)",
+            "/users/<pk>/soft-delete/": "PATCH - Soft delete a user"
         }
     })
 
 urlpatterns = [
-    path('', api_root),
+    path('', api_root, name='api-root'),
     path('auth/register/', RegisterView.as_view(), name='register'),
     path('auth/login/', MyTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('tasks/', TaskListCreateView.as_view(), name='task-list-create'),
