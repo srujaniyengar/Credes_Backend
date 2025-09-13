@@ -25,7 +25,11 @@ def main():
     print_header("1. Register new user")
     email = random_email()
     password = "TestPass123!"
-    user_data = {"email": email, "password": password}
+    user_data = {
+        "email": email,
+        "password": password,
+        "full_name": "Test User"
+    }
     r = requests.post(f"{API}/auth/register/", json=user_data)
     check(r)
     assert r.status_code in [200, 201], "Registration failed"
@@ -39,13 +43,22 @@ def main():
     refresh = tokens["refresh"]
     headers = {"Authorization": f"Bearer {access}"}
 
-    # 3. Create a task
-    print_header("3. Create a task")
+    # 3. Get user ID (from /auth/me/ or similar, if needed for assigned_to)
+    print_header("3. Get current user info (to get user id)")
+    r = requests.get(f"{API}/auth/me/", headers=headers)
+    check(r)
+    if r.status_code == 200 and "id" in r.json():
+        user_id = r.json()["id"]
+    else:
+        user_id = 1  # fallback, may need to change
+
+    # 4. Create a task
+    print_header("4. Create a task")
     task_data = {
         "title": "API Test Task",
         "description": "Created by automated test script",
         "status": "To-Do",
-        "assigned_to": 1  # Set this to your test user's ID if needed
+        "assigned_to": user_id
     }
     r = requests.post(f"{API}/tasks/", json=task_data, headers=headers)
     check(r)
@@ -53,51 +66,51 @@ def main():
     task = r.json()
     task_id = task["id"]
 
-    # 4. List all tasks
-    print_header("4. List all tasks")
+    # 5. List all tasks
+    print_header("5. List all tasks")
     r = requests.get(f"{API}/tasks/", headers=headers)
     check(r)
     assert r.status_code == 200, "Task list failed"
 
-    # 5. Add a comment to the task
-    print_header("5. Add a comment to task")
+    # 6. Add a comment to the task
+    print_header("6. Add a comment to task")
     comment_data = {"text": "Automated test comment"}
     r = requests.post(f"{API}/tasks/{task_id}/comments/", json=comment_data, headers=headers)
     check(r)
     assert r.status_code in [200, 201], "Adding comment failed"
 
-    # 6. Update the task
-    print_header("6. Update the task")
+    # 7. Update the task
+    print_header("7. Update the task")
     r = requests.patch(f"{API}/tasks/{task_id}/", json={"title": "Updated by test.py"}, headers=headers)
     check(r)
     assert r.status_code == 200, "Task update failed"
 
-    # 7. Refresh token
-    print_header("7. Refresh token")
+    # 8. Refresh token
+    print_header("8. Refresh token")
     r = requests.post(f"{API}/auth/refresh/", json={"refresh": refresh})
     check(r)
     new_access = r.json().get("access")
     if new_access:
         headers["Authorization"] = f"Bearer {new_access}"
 
-    # 8. Error handling: Bad token
-    print_header("8. Error: Bad token")
+    # 9. Error handling: Bad token
+    print_header("9. Error: Bad token")
     bad_headers = {"Authorization": "Bearer badtoken"}
     r = requests.get(f"{API}/tasks/", headers=bad_headers)
     check(r)
 
-    # 9. Error handling: Missing field
-    print_header("9. Error: Missing required field")
+    # 10. Error handling: Missing field
+    print_header("10. Error: Missing required field")
     r = requests.post(f"{API}/tasks/", headers=headers, json={"description": "Missing title"})
     check(r)
 
-    # 10. List users (may be forbidden if not admin)
-    print_header("10. List users (admin only)")
+    # 11. List users (may be forbidden if not admin)
+    print_header("11. List users (admin only)")
     r = requests.get(f"{API}/users/", headers=headers)
     check(r)
 
-    # 11. Delete the created task
-    print_header("11. Delete the task")
+    # 12. Delete the created task
+    print_header("12. Delete the task")
     r = requests.delete(f"{API}/tasks/{task_id}/", headers=headers)
     print(f"Status: {r.status_code}")
     print(r.text)
