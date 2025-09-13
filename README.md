@@ -1,11 +1,18 @@
 # Minimal Task Management System – Django REST Backend (v1)
 
-## Overview
+<p align="center">
+  <img src="https://img.shields.io/badge/Version-v1.0-blue?style=for-the-badge" alt="Version">
+  <img src="https://img.shields.io/badge/License-GPL%203.0-black?style=for-the-badge" alt="License">
+  <img src="https://img.shields.io/badge/DB-PostgreSQL%20%7C%20SQLite-blue?style=for-the-badge" alt="Database">
+  <img src="https://img.shields.io/badge/Tests-Passing-brightgreen?style=for-the-badge" alt="Tests">
+</p>
+
+
+---
 
 A minimal Task Management API built using Django, Django REST Framework (DRF), and JWT authentication. Implements robust RBAC, custom User model, soft delete, and all core features as per the assignment brief.
 
 ---
-
 ## Quickstart
 
 ### 1. Clone & Install
@@ -157,4 +164,4 @@ python test.py
 
 ## Contact
 
-Reach out: [srujanparthasarathyiyengar@gmail.com](mailto:srujanparthasarathyiyengar@gmail.com)
+Reach out: [srujanparthasarathyiyengar@gmail.com](mailto:contact@credes.in)

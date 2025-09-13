@@ -1,3 +1,10 @@
+<p align="center">
+  <img src="https://img.shields.io/badge/Version-v1.0-blue?style=for-the-badge" alt="Version">
+  <img src="https://img.shields.io/badge/License-GPL%203.0-black?style=for-the-badge" alt="License">
+  <img src="https://img.shields.io/badge/DB-PostgreSQL%20%7C%20SQLite-blue?style=for-the-badge" alt="Database">
+  <img src="https://img.shields.io/badge/Tests-Passing-brightgreen?style=for-the-badge" alt="Tests">
+</p>
+
 # Task Management API – Detailed Documentation (v1)
 
 ---
@@ -202,4 +209,4 @@ Response:
 
 ## 11. Contact
 
-Questions? [srujanparthasarathyiyengar@gmail.com](srujanparthasarathyiyengar@gmail.com)
+Questions? [srujanparthasarathyiyengar@gmail.com](mailto:srujanparthasarathyiyengar@gmail.com)
