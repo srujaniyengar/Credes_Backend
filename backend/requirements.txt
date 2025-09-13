@@ -19,3 +19,4 @@ dotenv
 djangorestframework
 psycopg2-binary
 djangorestframework-simplejwt
+ django-filter

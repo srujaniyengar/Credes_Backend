@@ -39,9 +39,9 @@ def test_admin_user_list():
     tokens = r.json()
     access = tokens["access"]
     headers = {"Authorization": f"Bearer {access}"}
-    step("List users as admin")
-    r = requests.get(f"{API}/users/", headers=headers)
-    passed = r.status_code == 200
+    step("List users as admin with pagination and filters")
+    r = requests.get(f"{API}/users/?role=User&page=1&page_size=5", headers=headers)
+    passed = r.status_code == 200 and "results" in r.json()
     print(f"Status: {r.status_code}")
     try:
         print(r.json())
@@ -61,12 +61,13 @@ def test_admin_view_all_comments(task_id):
     tokens = r.json()
     access = tokens["access"]
     headers = {"Authorization": f"Bearer {access}"}
-    step("Admin view all comments on a task")
-    r = requests.get(f"{API}/tasks/{task_id}/comments/", headers=headers)
-    passed = r.status_code == 200 and isinstance(r.json(), list)
+    step("Admin view all comments on a task with pagination and filters")
+    r = requests.get(f"{API}/tasks/{task_id}/comments/?author=&page=1&page_size=5", headers=headers)
+    json_data = r.json()
+    passed = r.status_code == 200 and "results" in json_data
     print(f"Status: {r.status_code}")
     try:
-        print(r.json())
+        print(json_data)
     except Exception:
         print(r.text)
     print("PASSED" if passed else "FAILED")
@@ -176,10 +177,12 @@ def test_soft_delete_user_flow():
     results.append(("Soft deleted user cannot use API", failed_api))
 
     # 7. User data is preserved and is_active is false
-    step("Admin checks user list for soft deleted user")
-    r = requests.get(f"{API}/users/", headers=admin_headers)
+    step("Admin checks user list for soft deleted user (paginated & filtered)")
+    r = requests.get(f"{API}/users/?is_active=False", headers=admin_headers)
     userlist = r.json()
-    found = any(u["email"] == user_email and u["is_active"] is False for u in userlist)
+    found = False
+    if "results" in userlist:
+        found = any(u["email"] == user_email and u["is_active"] is False for u in userlist["results"])
     print("Soft deleted user in list and inactive:", found)
     results.append(("Soft deleted user appears in list as inactive", found))
 
@@ -192,6 +195,27 @@ def test_soft_delete_user_flow():
             all_passed = False
     print("Soft Delete User Flow:", "PASSED" if all_passed else "FAILED")
     return all_passed
+
+def test_task_list_pagination_and_filter(headers, user_id):
+    step("Testing task list pagination and filters")
+    # Create extra tasks as admin (ensure > PAGE_SIZE tasks for pagination)
+    admin_email = os.environ.get("ADMIN_EMAIL", "admin1@admin.com")
+    admin_password = os.environ.get("ADMIN_PASSWORD", "passwordis12345")
+    r = requests.post(f"{API}/auth/login/", json={"email": admin_email, "password": admin_password})
+    admin_tokens = r.json()
+    admin_headers = {"Authorization": f"Bearer {admin_tokens['access']}"}
+    for i in range(15):
+        requests.post(f"{API}/tasks/", json={
+            "title": f"Paginated Task {i}", "description": "desc",
+            "status": "To-Do", "assigned_to": user_id
+        }, headers=admin_headers)
+    # Test pagination and filter
+    r = requests.get(f"{API}/tasks/?status=To-Do&page=1&page_size=10", headers=headers)
+    data = r.json()
+    passed = r.status_code == 200 and "results" in data and len(data["results"]) <= 10
+    print(f"Status: {r.status_code}, count: {len(data['results']) if 'results' in data else 0}")
+    print("PASSED" if passed else "FAILED")
+    return passed
 
 def main():
     results = []
@@ -228,9 +252,7 @@ def main():
             # Add a comment as user (should be allowed)
             step("User add comment to assigned task")
             r = requests.post(f"{API}/tasks/{task_id}/comments/", json={
-                "text": "Automated test comment",
-                "task": task_id,
-                "author": user_id
+                "text": "Automated test comment"
             }, headers=headers)
             passed, _ = check(r, expect=[201])
             results.append(("User add comment to assigned task", passed))
@@ -249,6 +271,10 @@ def main():
             results.append(("User add comment to assigned task", None))
             results.append(("User update status of assigned task", None))
             results.append(("User forbidden to delete task", None))
+
+        # Pagination and filter test on task list
+        pagination_and_filter = test_task_list_pagination_and_filter(headers, user_id)
+        results.append(("Task list pagination and filtering", pagination_and_filter))
 
         # Refresh token
         step("Refresh token")
@@ -293,16 +319,16 @@ def main():
         print("PASSED" if passed else "FAILED")
         results.append(("List users (admin only, as regular user)", passed))
 
-        # Admin user listing test
+        # Admin user listing test (pagination/filter)
         admin_user_list_passed = test_admin_user_list()
-        results.append(("Admin user list (GET /users/ as admin)", admin_user_list_passed))
+        results.append(("Admin user list (GET /users/ as admin, paginated/filtered)", admin_user_list_passed))
 
-        # Admin view all comments for the task
+        # Admin view all comments for the task (pagination/filter)
         if task_id:
             admin_view_comments_passed = test_admin_view_all_comments(task_id)
-            results.append(("Admin view all comments on a task", admin_view_comments_passed))
+            results.append(("Admin view all comments on a task (paginated/filtered)", admin_view_comments_passed))
         else:
-            results.append(("Admin view all comments on a task", None))
+            results.append(("Admin view all comments on a task (paginated/filtered)", None))
 
         # Soft delete user flow
         soft_delete_passed = test_soft_delete_user_flow()
